@@ -19,7 +19,7 @@ st.set_page_config(
 # ONNX 모델 다운로드 함수
 @st.cache_resource
 def download_model():
-    model_url = "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/classification/mnist/model/mnist-12-int8.onnx"
+    model_url = "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/classification/mnist/model/mnist-8.onnx"
     model_path = "mnist_model.onnx"
     
     if not os.path.exists(model_path):
