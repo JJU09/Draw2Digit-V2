@@ -1,5 +1,8 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
+import datetime
+import plotly.express as px
 from PIL import Image
 import onnxruntime as ort
 import os
@@ -16,7 +19,7 @@ st.set_page_config(
 # ONNX 모델 다운로드 함수
 @st.cache_resource
 def download_model():
-    model_url = "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/classification/mnist/model/mnist-8.onnx"
+    model_url = "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/classification/mnist/model/mnist-12-int8.onnx"
     model_path = "mnist_model.onnx"
     
     if not os.path.exists(model_path):
@@ -76,9 +79,51 @@ def predict_digit(model, image):
     probabilities = softmax(confidence)
     return predicted_digit, probabilities
 
+
+# 이미지 저장 함수
+def save_image_with_prediction(image_array, predicted_digit, probabilities, save_dir="saved_digits"):
+    # 저장 폴더가 없다면 생성
+    os.makedirs(save_dir, exist_ok=True)
+
+    # 저장할 이미지 (원본 사이즈 또는 28x28 전처리된 이미지 선택 가능)
+    img = Image.fromarray((image_array * 255).astype(np.uint8).reshape(28, 28))
+
+    # 파일 이름에 날짜와 예측 결과 포함
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_digit_{predicted_digit}_prob_{np.max(probabilities):.2f}.png"
+    file_path = os.path.join(save_dir, filename)
+
+    # 이미지 저장
+    img.save(file_path)
+    return file_path
+
+
+def display_gallery(save_dir="saved_digits"):
+    if not os.path.exists(save_dir):
+        st.info("아직 저장된 이미지가 없습니다.")
+        return
+
+    image_files = sorted(os.listdir(save_dir), reverse=True)  # 최신순
+    if not image_files:
+        st.info("아직 저장된 이미지가 없습니다.")
+        return
+
+    st.subheader("🖼️ 저장된 예측 결과 갤러리")
+    cols = st.columns(4)  # 한 줄에 4개씩
+
+    for i, file in enumerate(image_files):
+        if file.endswith(".png"):
+            img_path = os.path.join(save_dir, file)
+            with cols[i % 4]:
+                st.image(img_path, width=120)
+                st.caption(file)
+
+
 # 앱 시작
 st.title("손글씨 숫자 인식 앱")
 
+with st.expander("📂 저장된 이미지 갤러리 보기"):
+    display_gallery()
 # 모델 로드
 try:
     model = load_model()
@@ -103,7 +148,6 @@ with col1:
         drawing_mode="freedraw",
         key="canvas"
     )
-
 
 with col2:
     st.header("전처리된 이미지")
@@ -137,6 +181,25 @@ with col3:
                 st.markdown(f"""예측 번호 : {predicted_digit}      
                                 예측 확률 : {max_probabilities:.2%}""")
                 
+                # 확률 막대 그래프 표시
+                df = pd.DataFrame({
+                    "Digit": list(range(10)),
+                    "Probability": probabilities
+                })
+                fig = px.bar(df, x="Digit", y="Probability", title="각 숫자별 예측 확률", range_y=[0, 1])
+                fig.update_layout(
+                    xaxis=dict(
+                        tickmode='linear',
+                        tick0=0,
+                        dtick=1
+                    )
+                )
+                st.plotly_chart(fig)
+
+                # 저장 버튼
+                if st.button("이미지 저장"):
+                    save_path = save_image_with_prediction(processed_image, predicted_digit, probabilities)
+                    st.success(f"이미지가 저장되었습니다: `{save_path}`")
             else:
                 st.error("예측에 실패했습니다.")
         else:

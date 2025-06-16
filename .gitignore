@@ -1,5 +1,8 @@
 # venv 제외
-draw
+draw/
+
+# 저장된 이미지 제외
+saved_digits/
 
 # 모델 제외
 mnist_model.onnx
