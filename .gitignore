@@ -1,0 +1,9 @@
+# venv 제외
+draw
+
+# 모델 제외
+mnist_model.onnx
+
+
+
+
