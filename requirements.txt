@@ -1,7 +1,8 @@
 streamlit
 streamlit-drawable-canvas
+onnxruntime
 numpy
 opencv-python
 Pillow
-onnxruntime
-requests 
+plotly
+requests
